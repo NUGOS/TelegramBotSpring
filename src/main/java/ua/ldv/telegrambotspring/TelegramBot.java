@@ -5,9 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -32,15 +34,18 @@ public class TelegramBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
+            Message message = update.getMessage();
+            List<Message> messageList = new ArrayList<>();
+            messageList.add(message);
             long chatId = update.getMessage().getChatId();
 
-            switch (messageText) {
+            switch (message.getText()) {
                 case "/start":
                     startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
                     break;
                 default:
-                    List<String> result = openAIService.getCompletion(messageText);
+                    List<String> result = openAIService.getChatCompletion(messageList);
+                    log.info(result.toString());
                     sendMessage(chatId, String.join("\n", result));
             }
         }
@@ -53,7 +58,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void sendMessage(Long chatId, String textToSend) {
         SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(String.valueOf(chatId));
+        sendMessage.setChatId(chatId);
         sendMessage.setText(textToSend);
         try {
             execute(sendMessage);
